@@ -1,0 +1,35 @@
+<h1>
+  {{title}}
+</h1>
+<hr>
+<div>
+  Logged in: {{isLoggedIn()}}
+</div>
+<hr>
+<div>
+  Profile First Name: {{profileFirstName}}
+</div>
+<div>
+  Device Count: {{deviceCount}}
+</div>
+<div>
+ Total Steps: {{totalSteps}}
+</div>
+<div>
+  Total Calories: {{totalCalories}}
+</div>
+<div>
+  Activities Count: {{activitiesCount}}
+</div>
+<br>
+<div>
+  Error Message: {{errorMessage}}
+</div>
+<hr>
+<div>
+  <button (click)="getStuff()">Get Stuff</button>
+</div>
+<hr>
+<div>
+  <button (click)="logout()">Logout</button>
+</div>
