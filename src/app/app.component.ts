@@ -37,73 +37,51 @@ export class AppComponent implements OnInit {
 
   public getActivities(): void {
 
-    let that = this;
-
     let thirtyDaysAgo = this.getThirtyDaysAgo();
 
     this.msHealthService.getActivities({
       startTime: thirtyDaysAgo.toISOString(),
       endTime: (new Date()).toISOString()
-    }).then(
-      function (activities) {
-        console.log('AppComponent mshealth.getActivities().then success start.');
+    })
+    .subscribe(activities => {
+      console.log('AppComponent mshealth.getActivities().then success start.');
+      console.log(`AppComponent mshealth.getActivities().then devices: ${JSON.stringify(activities)}`);
 
-        console.log(`AppComponent mshealth.getActivities().then success activities.itemCount: ${activities.itemCount}`);
+      this.activitiesCount = activities.itemCount;
 
-        that.activitiesCount = activities.itemCount;
-
-        console.log(`AppComponent mshealth.getActivities().then success activities: ${JSON.stringify(activities)}`);
-
-        console.log('AppComponent mshealth.getActivities().then success end.');
-      },
-      function (error) {
-        console.log('AppComponent mshealth.getActivities().then error start.');
-        that.onError(error.error);
-        console.log('AppComponent mshealth.getActivities().then error end.');
-      }
-      );
+      console.log('AppComponent mshealth.getActivities().then success end.');
+    }, err => {
+      console.error(`AppComponent.getActivities() error: ${JSON.stringify(err)}`);
+      this.onError(err);
+    });
   }
 
   public getDevices(): void {
 
-    let that = this;
-
-    this.msHealthService.getDevices().then(
-      function (devices) {
+    this.msHealthService.getDevices()
+      .subscribe(devices => {
         console.log('AppComponent mshealth.getDevices().then success start.');
-        console.log(`AppComponent mshealth.getProfile().then devices.deviceProfiles.length: ${devices.deviceProfiles.length}`);
+        console.log(`AppComponent mshealth.getDevices().then devices: ${JSON.stringify(devices)}`);
 
-        that.deviceCount = devices.deviceProfiles.length;
+        this.deviceCount = devices.deviceProfiles.length;
 
         console.log('AppComponent mshealth.getDevices().then success end.');
-      },
-      function (error) {
-        console.log('AppComponent mshealth.getDevices().then error start.');
-        that.onError(error.error);
-        console.log('AppComponent mshealth.getDevices().then error end.');
-      }
-    );
+      }, err => {
+        console.error(`AppComponent.getDevices() error: ${JSON.stringify(err)}`);
+        this.onError(err);
+      });
   }
 
   public getProfile(): void {
 
-    let that = this;
-
-    this.msHealthService.getProfile().then(
-      function (profile) {
-        console.log('AppComponent mshealth.getProfile().then success start.');
-        console.log('AppComponent mshealth.getProfile().then success profile.firstName: ' + profile.firstName);
-
-        that.profileFirstName = profile.firstName;
-
-        console.log('AppComponent mshealth.getProfile().then success end.');
-      },
-      function (error) {
-        console.log('AppComponent mshealth.getProfile().then error start.');
-        that.onError(error.error);
-        console.log('AppComponent mshealth.getProfile().then error end.');
-      }
-    );
+    this.msHealthService.getProfile()
+      .subscribe(profile => {
+        console.log(`AppComponent.getProfile() success profile: ${JSON.stringify(profile)}`);
+        this.profileFirstName = profile.firstName;
+      }, err => {
+        console.error(`AppComponent.getProfile() error: ${JSON.stringify(err)}`);
+        this.onError(err);
+      });
   }
 
   public getStuff(): void {
@@ -123,9 +101,10 @@ export class AppComponent implements OnInit {
       period: 'daily',
       startTime: thirtyDaysAgo.toISOString(),
       endTime: (new Date()).toISOString()
-    }).then(
-      function (summaries) {
-        console.log('AppComponent mshealth.getSummaries().then success start.');
+    })
+    .subscribe(summaries => {
+      console.log('AppComponent mshealth.getSummaries().then success start.');
+      console.log(`AppComponent mshealth.getSummaries().then summaries: ${JSON.stringify(summaries)}`);
 
         let totalSteps = 0;
         let totalCalories = 0;
@@ -147,14 +126,11 @@ export class AppComponent implements OnInit {
         that.totalSteps = totalSteps;
         that.totalCalories = totalCalories;
 
-        console.log('AppComponent mshealth.getSummaries().then success end.');
-      },
-      function (error) {
-        console.log('AppComponent mshealth.getSummaries().then error start.');
-        that.onError(error.error);
-        console.log('AppComponent mshealth.getSummaries().then error end.');
-      }
-      );
+      console.log('AppComponent mshealth.getSummaries().then success end.');
+    }, err => {
+      console.error(`AppComponent.getSummaries() error: ${JSON.stringify(err)}`);
+      this.onError(err);
+    });
 
   }
 
@@ -174,9 +150,11 @@ export class AppComponent implements OnInit {
 
   private onError(error) {
 
+    console.log(`AppComponent onError error: ${JSON.stringify(error)}`);
+
     if (error && error.details) {
       this.errorMessage = error.details[0].message;
-    } else if (error) {
+    } else if (error && error.message) {
       this.errorMessage = error.message;
     } else {
       this.errorMessage = 'An error occurred';

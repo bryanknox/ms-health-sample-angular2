@@ -1,11 +1,12 @@
+import { Http, Headers } from '@angular/http';
 import { Injectable } from '@angular/core';
-import { PromiseThing } from './PromiseThing';
+import 'rxjs/add/operator/map';
 
 const apiTemplateUrl = 'https://api.microsofthealth.net/v1/me/{path}?{parameters}';
 
 const authHeaderTemplate = 'Bearer {access_token}';
 
-const clientId = 'your-client-id-goes-here';
+const clientId = 'your-clientId-goes-here';
 
 // tslint:disable-next-line:max-line-length
 const loginUrlTemplate = 'https://login.live.com/oauth20_authorize.srf?client_id={client_id}&scope={scope}&response_type=token&redirect_uri={redirect_uri}';
@@ -20,42 +21,59 @@ const scope = 'mshealth.ReadProfile mshealth.ReadDevices mshealth.ReadActivityHi
 export class MsHealthService {
 
   private accessToken: string;
+  private http: Http;
 
-  constructor() { }
+  constructor(http: Http) {
+
+    this.http = http;
+  }
 
   public getActivities(options) {
-    return this.query({
-      path: 'Activities',
-      method: 'GET',
-      parameters: {
-        activityIds: options.activityIds,
-        activityTypes: options.activityTypes,
-        activityIncludes: options.activityIncludes,
-        splitDistanceType: options.splitDistanceType,
-        startTime: options.startTime,
-        endTime: options.endTime,
-        deviceIds: options.deviceIds,
-        maxPageSize: options.maxPageSize
-      }
-    });
+    console.log(`MsHealthService.getActivities(..) start options: ${options}.`);
+
+    let parameterObject = {
+      activityIds: options.activityIds,
+      activityTypes: options.activityTypes,
+      activityIncludes: options.activityIncludes,
+      splitDistanceType: options.splitDistanceType,
+      startTime: options.startTime,
+      endTime: options.endTime,
+      deviceIds: options.deviceIds,
+      maxPageSize: options.maxPageSize
+    };
+
+    let parameters = this.getParametersFromObject(parameterObject);
+
+    let response = this.httpGet('Activities', parameters);
+
+    console.log('MsHealthService.getActivities() end.');
+
+    return response;
+
   };
 
   // Don't pass in a deviceId to get all devices.
   public getDevices(deviceId?: string) {
-    console.log(`MsHealthService.getDevices(${deviceId}) calls query(..).`);
-    let path = deviceId ? 'Devices/' + encodeURIComponent(deviceId) : 'Devices';
-    return this.query({
-      path: path,
-      method: 'GET'
-    });
+
+    console.log(`MsHealthService.getDevices(${deviceId}) start.`);
+
+    let path = deviceId ? `Devices/${encodeURIComponent(deviceId)}` : 'Devices';
+
+    let response = this.httpGet(path, '');
+
+    console.log('MsHealthService.getProfile() end.');
+
+    return response;
   };
 
   public getProfile() {
-    console.log('MsHealthService.getProfile() calls query(..).');
-    return this.query({
-      path: 'Profile',
-      method: 'GET'
-    });
+    console.log('MsHealthService.getProfile() start.');
+
+    let response = this.httpGet('Profile', '');
+
+    console.log('MsHealthService.getProfile() end.');
+
+    return response;
   };
 
   public getSummaries(options?) {
@@ -63,21 +81,25 @@ export class MsHealthService {
       console.log('MsHealthService.getSummaries() bad args - A period is required to call the summaries API.');
       throw 'A period is required to call the summaries API';
     }
+    console.log('MsHealthService.getProfile() start.');
 
-    console.log('MsHealthService.getSummaries() calls query(..).');
+    let parameterObject = {
+      startTime: options.startTime,
+      endTime: options.endTime,
+      deviceIds: options.deviceIds,
+      maxPageSize: options.maxPageSize
+    };
 
-    return this.query({
-      path: 'Summaries/' + options.period,
-      method: 'GET',
-      parameters: {
-        startTime: options.startTime,
-        endTime: options.endTime,
-        deviceIds: options.deviceIds,
-        maxPageSize: options.maxPageSize
-      }
-    });
+    let path = `Summaries/${options.period}`;
+
+    let parameters = this.getParametersFromObject(parameterObject);
+
+    let response = this.httpGet(path, parameters);
+
+    console.log('MsHealthService.getProfile() end.');
+
+    return response;
   };
-
 
   public isLoggedIn(): boolean {
     return !!this.accessToken;
@@ -117,8 +139,22 @@ export class MsHealthService {
     window.location.href = url;
   }
 
+  private getApiUrl(path: string, parameters: string): string {
+    let url = apiTemplateUrl.replace('{path}', path)
+      .replace('{parameters}', parameters);
+
+    return url;
+  }
+
   private getAuthorizationHeader(): string {
     return authHeaderTemplate.replace('{access_token}', this.accessToken);
+  }
+
+  private getRequestHeaders(): Headers {
+    let authorizationHeader = this.getAuthorizationHeader();
+    let headers = new Headers();
+    headers.append('Authorization', authorizationHeader);
+    return headers;
   }
 
   private getLoginUrl(): string {
@@ -136,20 +172,35 @@ export class MsHealthService {
     return url;
   }
 
-  private getParametersFromQueryOptions(optionsParameters): string {
+  private getParametersFromObject(parametersObject): string {
 
     let queryParameters = '';
 
-    if (optionsParameters) {
-      for (let p in optionsParameters) {
-        if (optionsParameters[p]) {
-          queryParameters = queryParameters.concat(encodeURI(p) + '=' + encodeURI(optionsParameters[p]) + '&');
+    if (parametersObject) {
+      for (let p in parametersObject) {
+        if (parametersObject[p]) {
+          queryParameters = queryParameters.concat(encodeURI(p) + '=' + encodeURI(parametersObject[p]) + '&');
         }
       }
     }
 
     return queryParameters.substring(0, queryParameters.length - 1);
   }
+
+  private httpGet(path: string, parameters: string) {
+    console.log(`MsHealthService.httpGet() start path: ${path}, ${parameters}`);
+
+    let url = this.getApiUrl(path, parameters);
+
+    let headers = this.getRequestHeaders();
+
+    let response = this.http.get(url, { headers: headers })
+      .map(res => res.json());
+
+    console.log('MsHealthService.httpGet() end.');
+
+    return response;
+  };
 
   private parseAccessTokenFromHash(hash: string): string {
 
@@ -173,47 +224,6 @@ export class MsHealthService {
       }
     }
     return dictionary;
-  }
-
-  private query(options): PromiseThing {
-    console.log(`MsHealthService.query(..) options.path: ${options.path} ${options.method}`);
-
-    if (!this.accessToken) {
-      console.log('MsHealthService.query(..) throw: User is not authenticated, call login function first');
-      throw 'User is not authenticated, call login function first';
-    }
-
-    let queryParameters = options.parameters ? this.getParametersFromQueryOptions(options.parameters) : '';
-
-    let url = apiTemplateUrl.replace('{path}', options.path).replace('{parameters}', queryParameters);
-
-    let promiseThing = new PromiseThing();
-
-    let xmlHttpRequest = new XMLHttpRequest();
-    xmlHttpRequest.open(options.method, url, true);
-    xmlHttpRequest.setRequestHeader('Authorization', this.getAuthorizationHeader());
-
-    xmlHttpRequest.onload = function () {
-      let request = this; // WTF?
-
-      if (request.status >= 200 && request.status < 300) {
-        promiseThing.resolve(JSON.parse(request.responseText));
-      } else {
-        promiseThing.reject(request.responseText ? JSON.parse(request.responseText) : {});
-      }
-    };
-
-    xmlHttpRequest.onerror = function () {
-      let request = this; // WTF?
-
-      promiseThing.reject(request.responseText ? JSON.parse(request.responseText) : {});
-    };
-
-    xmlHttpRequest.send();
-
-    console.log('MicrosoftHealth.query(..) end. promise: ' + promiseThing);
-
-    return promiseThing;
   }
 
 }
